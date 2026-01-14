@@ -4,6 +4,7 @@ import time
 import argparse
 import threading
 import statistics
+import numpy as np
 from ultralytics import YOLO
 from jtop import jtop
 
@@ -109,6 +110,7 @@ def run_benchmark(data_path, models_folder, output_csv):
             print(f"Testing: {model_file}")
             
             ext = os.path.splitext(model_file)[1]
+            file_size_mb = os.path.getsize(model_path) / (1024 * 1024)
             
             try:
                 model = YOLO(model_path, task='detect')
@@ -130,6 +132,7 @@ def run_benchmark(data_path, models_folder, output_csv):
                 writer.writerow([
                     model_file, 
                     ext, 
+                    f"{file_size_mb:.2f}",
                     f"{map50_95:.4f}", 
                     f"{map50:.4f}", 
                     f"{t_inf:.2f}", 
