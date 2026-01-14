@@ -81,9 +81,9 @@ class HardwareMonitor:
             'Fan PWM (%)': safe_mean(self.stats['fan_pwm']),
             'Temp CPU (C)': safe_mean(self.stats['cpu_temp']),
             'Temp GPU (C)': safe_mean(self.stats['gpu_temp']),
-            'Power (W)': safe_mean(self.stats['power_total']),
-            'Power VDD_SOC (W)': safe_mean(self.stats['power_vdd_soc']),
-            'Power VDD_CPU_GPU_CV (W)': safe_mean(self.stats['power_gpu_cpu_cv']),
+            'Power (mW)': safe_mean(self.stats['power_total']),
+            'Power VDD_SOC (mW)': safe_mean(self.stats['power_vdd_soc']),
+            'Power VDD_CPU_GPU_CV (mW)': safe_mean(self.stats['power_gpu_cpu_cv']),
         }
 
 def run_benchmark(data_path, models_folder, output_csv):
@@ -96,9 +96,9 @@ def run_benchmark(data_path, models_folder, output_csv):
 
     print(f"Found {len(model_files)} models. Starting benchmark on {data_path}")
 
-    headers = ['Model', 'Format', 'mAP50-95', 'mAP50', 'Inference Time (ms)', 'Preprocess Time (ms)', 'Postprocess Time (ms)',
+    headers = ['Model', 'Format', 'File Size (MB)', 'mAP50-95', 'mAP50', 'Inference Time (ms)', 'Preprocess Time (ms)', 'Postprocess Time (ms)',
                'CPU Usage (%)', 'GPU Usage (%)', 'RAM Usage (%)', 'Swap Usage (%)', 'Fan PWM (%)', 'Temp CPU (C)', 'Temp GPU (C)',
-               'Power (W)', 'Power VDD_SOC (W)', 'Power VDD_CPU_GPU_CV (W)']
+               'Power (mW)', 'Power VDD_SOC (mW)', 'Power VDD_CPU_GPU_CV (mW)']
     
     with open(output_csv, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -142,9 +142,9 @@ def run_benchmark(data_path, models_folder, output_csv):
                     hw_stats['Fan PWM (%)'],
                     hw_stats['Temp CPU (C)'],
                     hw_stats['Temp GPU (C)'],
-                    hw_stats['Power (W)'],
-                    hw_stats['Power VDD_SOC (W)'],
-                    hw_stats['Power VDD_CPU_GPU_CV (W)']
+                    hw_stats['Power (mW)'],
+                    hw_stats['Power VDD_SOC (mW)'],
+                    hw_stats['Power VDD_CPU_GPU_CV (mW)']
                 ])
                 
                 del model
