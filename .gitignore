@@ -1,0 +1,10 @@
+coco128/
+videos/
+hailo-rpi5-examples-main/
+__pycache__/
+*.log
+*.mp4
+*.jpg
+*.png
+*.json
+.venv/
