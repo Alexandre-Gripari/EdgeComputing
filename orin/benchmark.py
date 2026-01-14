@@ -37,21 +37,13 @@ class HardwareMonitor:
                     self.stats['cpu_usage'].append(cpu_total / 6)
 
                     self.stats['gpu_usage'].append(jetson.stats.get('GPU', 0))
-
                     self.stats['ram_usage'].append(jetson.stats.get('RAM', 0))
-
                     self.stats['swap_usage'].append(jetson.stats.get('SWAP', 0))
-
                     self.stats['fan_pwm'].append(jetson.stats.get('Fan pwmfan0', 0))
-
                     self.stats['cpu_temp'].append(jetson.stats.get('Temp CPU', 0))
-
                     self.stats['gpu_temp'].append(jetson.stats.get('Temp GPU', 0))
-
                     self.stats['power_total'].append(jetson.stats.get('Power TOT', 0))
-
                     self.stats['power_vdd_soc'].append(jetson.stats.get('Power VDD_SOC', 0))
-
                     self.stats['power_gpu_cpu_cv'].append(jetson.stats.get('Power VDD_CPU_GPU_CV', 0))
 
                 except Exception as e:
@@ -114,6 +106,10 @@ def run_benchmark(data_path, models_folder, output_csv):
             
             try:
                 model = YOLO(model_path, task='detect')
+                
+                dummy_input = np.random.randint(0, 255, (640, 640, 3), dtype=np.uint8)
+                for _ in range(20):
+                    model(dummy_input, verbose=False)
                 
                 monitor = HardwareMonitor()
                 monitor.start()
