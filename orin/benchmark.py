@@ -97,6 +97,35 @@ def run_benchmark(data_path, models_folder, output_csv):
         writer = csv.writer(file)
         writer.writerow(headers)
 
+        monitor = HardwareMonitor()
+        monitor.start()
+        time.sleep(5)
+        monitor.stop()
+        hw_stats = monitor.get_averages()
+
+        writer.writerow([
+                    "/",
+                    "/",
+                    "/",
+                    "/",
+                    "/",
+                    "/",
+                    "/",
+                    "/",
+                    hw_stats['CPU Usage (%)'],
+                    hw_stats['GPU Usage (%)'],
+                    hw_stats['RAM Usage (%)'],
+                    hw_stats['Swap Usage (%)'],
+                    hw_stats['Fan PWM (%)'],
+                    hw_stats['Temp CPU (C)'],
+                    hw_stats['Temp GPU (C)'],
+                    hw_stats['Power (mW)'],
+                    hw_stats['Power VDD_SOC (mW)'],
+                    hw_stats['Power VDD_CPU_GPU_CV (mW)']
+                ])
+        
+        monitor.stop()
+
         for model_file in model_files:
             model_path = os.path.join(models_folder, model_file)
             print(f"Testing: {model_file}")
