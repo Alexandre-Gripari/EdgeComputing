@@ -26,12 +26,16 @@ class HardwareMonitor:
             'Power VDD_CPU_GPU_CV (mW)': 'power_gpu_cpu_cv'
         }
         self.stats = {v: [] for v in self.output_mapping.values()}
+        self.time_log = []
         self.thread = None
+        self.start_time = 0
 
     def _monitor_loop(self):
         with jtop() as jetson:
             while self.running and jetson.ok():
                 try:
+                    elapsed = time.time() - self.start_time
+                    self.time_log.append(elapsed)
                     data = {
                         'cpu_usage': sum(jetson.stats.get(f'CPU{i}', 0) for i in range(1, 7)) / 6,
                         'gpu_usage': jetson.stats.get('GPU', 0),
@@ -52,6 +56,8 @@ class HardwareMonitor:
     def start(self):
         self.running = True
         self.stats = {k: [] for k in self.stats}
+        self.time_log = [] 
+        self.start_time = time.time()
         self.thread = threading.Thread(target=self._monitor_loop)
         self.thread.start()
 
@@ -61,20 +67,18 @@ class HardwareMonitor:
             self.thread.join()
             
     def save_to_csv(self, filepath):
-        if not self.stats['gpu_usage']:
+        if not self.time_log:
             return
 
-        headers = ['Step'] + list(self.output_mapping.keys())
+        headers = ['Time (s)'] + list(self.output_mapping.keys())
         keys = list(self.output_mapping.values())
-        num_samples = len(self.stats['gpu_usage'])
-
         try:
             with open(filepath, mode='w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(headers)
                 
-                for i in range(num_samples):
-                    row = [i]
+                for i, t_val in enumerate(self.time_log):
+                    row = [f"{t_val:.2f}"]
                     for k in keys:
                         val = self.stats[k][i] if i < len(self.stats[k]) else 0
                         row.append(val)
@@ -123,8 +127,7 @@ def run_benchmark(data_path, models_folder, output_folder):
         time.sleep(5)
         monitor.stop()
         hw_stats = monitor.get_averages()
-
-        writer.writerow(['/'] * 8 + [hw_stats[k] for k in hw_headers])
+        writer.writerow(['Baseline'] + ['/'] * 7 + [hw_stats[k] for k in hw_headers])
 
         for model_file in model_files:
             model_path = os.path.join(models_folder, model_file)
@@ -175,7 +178,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Jetson Orin YOLO Benchmark Tool')
     parser.add_argument('--data', type=str, default='coco128.yaml', help='Path to dataset yaml (e.g. coco128.yaml)')
     parser.add_argument('--models', type=str, required=True, help='Folder containing model files')
-    parser.add_argument('--output', type=str, default='benchmark_results', help='Output folder path')
+    parser.add_argument('--output', type=str, default='benchmark', help='Output folder path')
     
     args = parser.parse_args()
     run_benchmark(args.data, args.models, args.output)
