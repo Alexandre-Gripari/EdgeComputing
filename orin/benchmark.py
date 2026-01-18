@@ -59,6 +59,28 @@ class HardwareMonitor:
         self.running = False
         if self.thread:
             self.thread.join()
+            
+    def save_to_csv(self, filepath):
+        if not self.stats['gpu_usage']:
+            return
+
+        headers = ['Step'] + list(self.output_mapping.keys())
+        keys = list(self.output_mapping.values())
+        num_samples = len(self.stats['gpu_usage'])
+
+        try:
+            with open(filepath, mode='w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(headers)
+                
+                for i in range(num_samples):
+                    row = [i]
+                    for k in keys:
+                        val = self.stats[k][i] if i < len(self.stats[k]) else 0
+                        row.append(val)
+                    writer.writerow(row)
+        except Exception as e:
+            print(f"Error saving raw log {filepath}: {e}")
 
     def get_averages(self):
         gpu_data = self.stats['gpu_usage']
@@ -76,12 +98,15 @@ class HardwareMonitor:
 
         return {label: filtered_mean(key) for label, key in self.output_mapping.items()}
 
-def run_benchmark(data_path, models_folder, output_csv):
+def run_benchmark(data_path, models_folder, output_folder):
     model_files = sorted([f for f in os.listdir(models_folder) if f.endswith(VALID_EXTENSIONS)])
     
     if not model_files:
         print(f"No models found in {models_folder}")
         return
+
+    os.makedirs(output_folder, exist_ok=True)
+    output_csv = os.path.join(output_folder, 'benchmark_results.csv')
 
     print(f"Found {len(model_files)} models. Starting benchmark on {data_path}")
 
@@ -119,6 +144,9 @@ def run_benchmark(data_path, models_folder, output_csv):
                 results = model.val(data=data_path, imgsz=640, verbose=False, device=0)
                 monitor.stop()
                 
+                raw_filename = f"{model_file}_raw.csv"
+                monitor.save_to_csv(os.path.join(output_folder, raw_filename))
+                
                 hw_stats = monitor.get_averages()
                 
                 row_data = [
@@ -147,7 +175,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Jetson Orin YOLO Benchmark Tool')
     parser.add_argument('--data', type=str, default='coco128.yaml', help='Path to dataset yaml (e.g. coco128.yaml)')
     parser.add_argument('--models', type=str, required=True, help='Folder containing model files')
-    parser.add_argument('--output', type=str, default='benchmark_results.csv', help='Output CSV filename')
+    parser.add_argument('--output', type=str, default='benchmark_results', help='Output folder path')
     
     args = parser.parse_args()
     run_benchmark(args.data, args.models, args.output)
