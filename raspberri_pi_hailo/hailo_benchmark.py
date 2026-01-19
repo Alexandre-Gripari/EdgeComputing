@@ -6,6 +6,26 @@ import re
 import sys
 import os
 import time
+import csv
+import datetime
+
+def save_to_csv(data, filename):
+    file_exists = os.path.isfile(filename)
+    fieldnames = [
+        "Timestamp", "Model", "FPS", 
+        "HW Latency (ms)", "Overall Latency (ms)", 
+        "Avg Temp (C)", "Min Temp (C)", "Max Temp (C)"
+    ]
+    
+    try:
+        with open(filename, mode='a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(data)
+        print(f"Results saved to {filename}")
+    except Exception as e:
+        print(f"Error saving to CSV: {e}")
 
 def check_dependencies():
     if not shutil.which("hailortcli"):
@@ -109,6 +129,7 @@ def main():
     parser = argparse.ArgumentParser(description="RPi5 + Hailo-8L Real-Time Benchmark")
     parser.add_argument("--hef", type=str, help="Path to HEF file")
     parser.add_argument("--time", type=int, default=60, help="Duration in seconds")
+    parser.add_argument("--csv", type=str, default="benchmark_hailo.csv", help="Output CSV file for results")
     args = parser.parse_args()
 
     hef_file = args.hef
@@ -177,6 +198,20 @@ def main():
     print(f"{'Temperature (Max)':<20} | {max_str}")
     print(f"{'Temperature (Delta)':<20} | {delta_str}")
     print("="*60)
+
+    csv_data = {
+        "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Model": hef_file,
+        "FPS": fps if fps else "N/A",
+        "HW Latency (ms)": stats.get('hw_latency', 'N/A'),
+        "Overall Latency (ms)": stats.get('overall_latency', 'N/A'),
+        "Avg Temp (C)": temp_avg if temp_avg is not None else "N/A",
+        "Min Temp (C)": temp_min if temp_min is not None else "N/A",
+        "Max Temp (C)": temp_max if temp_max is not None else "N/A"
+    }
+    
+    save_to_csv(csv_data, args.csv)
+
 
 if __name__ == "__main__":
     main()

@@ -47,8 +47,8 @@ def on_message(bus, message, loop):
         loop.quit()
     return True
 
-def process_video(video_path):
-    print(f"Processing video: {video_path}")
+def process_video(video_path, hef_path):
+    print(f"Processing video: {video_path} using model: {hef_path}")
     
     pipeline_str = (
         f"filesrc location={video_path} ! "
@@ -57,7 +57,7 @@ def process_video(video_path):
         "videoscale ! "
         "video/x-raw, width=640, height=640, format=RGB ! "
         "queue max-size-buffers=3 ! "
-        "hailonet hef-path=/home/yanis/edge_computing/yolov11s.hef batch-size=1 nms-score-threshold=0.3 nms-iou-threshold=0.45 output-format-type=HAILO_FORMAT_TYPE_FLOAT32 ! "
+        f"hailonet hef-path={hef_path} batch-size=1 nms-score-threshold=0.3 nms-iou-threshold=0.45 output-format-type=HAILO_FORMAT_TYPE_FLOAT32 ! "
         "queue max-size-buffers=3 ! "
         "hailofilter name=filter so-path=/usr/local/hailo/resources/so/libyolo_hailortpp_postprocess.so function-name=filter qos=false ! "
         "queue max-size-buffers=3 ! "
@@ -118,9 +118,24 @@ def process_video(video_path):
         time.sleep(2.0)
 
 if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Run Hailo object detection on videos")
+    parser.add_argument("--model", type=str, default="/home/yanis/edge_computing/EdgeComputing/raspberri_pi_hailo/yolov11n.hef",
+                        help="Path to the HEF model file")
+    parser.add_argument("--videos", type=str, default="./videos", 
+                        help="Directory containing video files")
+    args = parser.parse_args()
+
     Gst.init(None)
     
-    video_dir = "/home/yanis/edge_computing/videos"
+    video_dir = args.videos
+    hef_path = args.model
+    
+    if not os.path.exists(hef_path):
+        print(f"Erreur: Le fichier modèle n'existe pas: {hef_path}")
+        sys.exit(1)
+        
     video_extensions = ['*.mp4', '*.webm', '*.avi', '*.mkv']
     video_files = []
     
@@ -133,11 +148,11 @@ if __name__ == "__main__":
         print(f"Aucune vidéo trouvée dans {video_dir}")
         exit(1)
         
-    print(f"Trouvé {len(video_files)} vidéos. Lancement du traitement...")
+    print(f"Trouvé {len(video_files)} vidéos. Lancement du traitement avec le modèle: {hef_path}")
     
     import gc
     for video_file in video_files:
-        process_video(video_file)
+        process_video(video_file, hef_path)
         gc.collect()
         print("-" * 50)
         time.sleep(1)

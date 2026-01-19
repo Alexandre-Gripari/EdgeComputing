@@ -7,6 +7,9 @@ import time
 import glob
 import json
 import sys
+import argparse
+import csv
+import datetime
 import threading
 from collections import deque
 from functools import lru_cache
@@ -45,6 +48,24 @@ def load_image_metadata():
             "height": h
         })
     return metadata
+
+def save_to_csv(data, filename):
+    file_exists = os.path.isfile(filename)
+    fieldnames = [
+        "Timestamp", "Model", "Duration (s)", "FPS", 
+        "mAP (0.50:0.95)", "mAP (0.50)", "mAP (0.75)"
+    ]
+    
+    try:
+        with open(filename, mode='a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(data)
+        print(f"Results saved to {filename}")
+    except Exception as e:
+        print(f"Error saving to CSV: {e}")
+
 
 
 def generate_ground_truth(image_meta):
@@ -194,19 +215,23 @@ def run_inference_optimized(image_meta):
         print(f"Error: {err}, {debug}")
         pipeline.set_state(Gst.State.NULL)
         t.join()
-        return
+        pipeline.set_state(Gst.State.NULL)
+        t.join()
+        return 0.0, 0.0
     
     pipeline.set_state(Gst.State.NULL)
     t.join()
 
     end_time = time.monotonic()
-    duration = end_time - start_time  # (Il faut définir start_time au début de la fonction)
+    duration = end_time - start_time
     fps_app = len(results) / duration
     print(f"   -> Temps Total : {duration:.2f}s | FPS Applicatif : {fps_app:.2f} FPS")
     
     with open(PRED_JSON, 'w') as f:
         json.dump(results, f, separators=(",", ":"))
     print(f"   -> Inference done. {len(results)} detections saved.")
+    
+    return duration, fps_app
 
 def evaluate():
     print("[3/3] Calculating mAP...")
@@ -221,15 +246,36 @@ def evaluate():
         cocoEval.accumulate()
         sys.stdout = old_stdout
         cocoEval.summarize()
+        return cocoEval.stats
     except Exception as e:
         sys.stdout = old_stdout
         print(f"Evaluation Error: {e}")
+        return []
 
 def main():
+    parser = argparse.ArgumentParser(description="Hailo COCO Benchmark")
+    parser.add_argument("--csv", type=str, default="benchmark_coco.csv", help="Output CSV file for results")
+    args = parser.parse_args()
+
     image_meta = load_image_metadata()
     generate_ground_truth(image_meta)
-    run_inference_optimized(image_meta)
-    evaluate()
+    duration, fps = run_inference_optimized(image_meta)
+    stats = evaluate()
+
+    if stats is not None and len(stats) >= 3:
+         # Prepare data for CSV
+        csv_data = {
+            "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Model": HEF_FILE,
+            "Duration (s)": round(duration, 2),
+            "FPS": round(fps, 2),
+            "mAP (0.50:0.95)": stats[0],
+            "mAP (0.50)": stats[1],
+            "mAP (0.75)": stats[2]
+        }
+        save_to_csv(csv_data, args.csv)
+    else:
+        print("Warning: Could not get mAP stats for CSV export.")
 
 
 if __name__ == "__main__":
