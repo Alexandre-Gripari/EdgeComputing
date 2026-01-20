@@ -4,6 +4,8 @@ import time
 import argparse
 import threading
 import statistics
+import gc
+import torch
 import numpy as np
 from ultralytics import YOLO
 from jtop import jtop
@@ -87,20 +89,11 @@ class HardwareMonitor:
             print(f"Error saving raw log {filepath}: {e}")
 
     def get_averages(self):
-        gpu_data = self.stats['gpu_usage']
-        if not gpu_data:
-            return {k: 0.0 for k in self.output_mapping}
+        def safe_mean(data):
+            valid_data = [x for x in data if x is not None]
+            return statistics.mean(valid_data) if valid_data else 0.0
 
-        active_indices = [i for i, x in enumerate(gpu_data) if x > 0]
-        if not active_indices:
-            active_indices = list(range(len(gpu_data)))
-
-        def filtered_mean(key):
-            data = self.stats[key]
-            valid_values = [data[i] for i in active_indices if i < len(data) and data[i] is not None]
-            return statistics.mean(valid_values) if valid_values else 0.0
-
-        return {label: filtered_mean(key) for label, key in self.output_mapping.items()}
+        return {label: safe_mean(self.stats[key]) for label, key in self.output_mapping.items()}
 
 def run_benchmark(data_path, models_folder, output_folder):
     model_files = sorted([f for f in os.listdir(models_folder) if f.endswith(VALID_EXTENSIONS)])
@@ -144,7 +137,7 @@ def run_benchmark(data_path, models_folder, output_folder):
                     model(dummy_input, verbose=False)
                 
                 monitor.start()
-                results = model.val(data=data_path, imgsz=640, verbose=False, device=0)
+                results = model.val(data=data_path, imgsz=640, verbose=False, device=0, plots=False)
                 monitor.stop()
                 
                 raw_filename = f"{model_file}_raw.csv"
@@ -167,6 +160,12 @@ def run_benchmark(data_path, models_folder, output_folder):
                 
                 del model
                 del results
+                
+                gc.collect()
+                
+                torch.cuda.empty_cache()
+                
+                time.sleep(2)
 
             except Exception as e:
                 print(f"Error: {e}")
