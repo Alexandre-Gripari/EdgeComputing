@@ -1,0 +1,2 @@
+Timestamp,Model,FPS,HW Latency (ms),Overall Latency (ms),Avg Temp (C),Min Temp (C),Max Temp (C)
+2026-01-19 08:31:15,yolov11n.hef,77.92,11.46,15.44,46.0318,45.6123,46.3711
