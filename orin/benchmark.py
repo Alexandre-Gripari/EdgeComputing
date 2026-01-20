@@ -39,8 +39,8 @@ class HardwareMonitor:
                     data = {
                         'cpu_usage': sum(jetson.stats.get(f'CPU{i}', 0) for i in range(1, 7)) / 6,
                         'gpu_usage': jetson.stats.get('GPU', 0),
-                        'ram_usage': jetson.stats.get('RAM', 0),
-                        'swap_usage': jetson.stats.get('SWAP', 0),
+                        'ram_usage': jetson.stats.get('RAM', 0)*100,
+                        'swap_usage': jetson.stats.get('SWAP', 0)*100,
                         'fan_pwm': jetson.stats.get('Fan pwmfan0', 0),
                         'cpu_temp': jetson.stats.get('Temp CPU', 0),
                         'gpu_temp': jetson.stats.get('Temp GPU', 0),
