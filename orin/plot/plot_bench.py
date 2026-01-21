@@ -8,7 +8,7 @@ def load_data_and_baseline(filepath):
     
     baseline_row = df[df['Model'] == 'Baseline']
     if not baseline_row.empty:
-        baseline_swap_pct = float(baseline_row['Swap Usage (%)'].iloc[0]) * 100
+        baseline_swap_pct = float(baseline_row['Swap Usage (%)'].iloc[0])
     else:
         baseline_swap_pct = 0.0
 
@@ -115,7 +115,7 @@ def plot_swap_usage_stacked(df, filename, baseline_pct, total_swap_gb=16, filter
     for models in filter_models:
         data = data[data['Model'] != models]
     
-    total_pct = data['Swap Usage (%)'] * 100
+    total_pct = data['Swap Usage (%)']
     
     inference_pct = (total_pct - baseline_pct).clip(lower=0)
     base_heights = np.minimum(total_pct, baseline_pct)
@@ -155,14 +155,14 @@ def plot_swap_usage_stacked(df, filename, baseline_pct, total_swap_gb=16, filter
     plt.close()
 
 if __name__ == "__main__":
-    df_clean, baseline_val = load_data_and_baseline('benchmark_results.csv')
+    df_clean, baseline_val = load_data_and_baseline('benchmark_results_person.csv')
 
     plot_bubble_chart(
         df_clean, 
-        title='Précision vs Énergie (Highlight: Vitesse & Puissance)', 
+        title='Précision vs Énergie', 
         filename='graph1_precision_joules.png',
         color='blue',
-        filter_models=['yolo11n-8.engine'],
+        filter_models=['yolo11n.onnx'],
         highlight_special=True
     )
     
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
     plot_bubble_chart(
         df_clean, 
-        title='Précision vs Énergie (Tous les modèles)', 
+        title='Précision vs Énergie', 
         filename='graph4_precision_joules_all.png',
         color='orange',
         highlight_special=True
