@@ -108,6 +108,61 @@ def plot_cpu_gpu_usage(df, filename, filter_models=[]):
     plt.savefig(filename, dpi=300)
     plt.close()
 
+def plot_time_breakdown(df, filename, filter_models=[]):
+    data = df.copy()
+    
+    for models in filter_models:
+        data = data[data['Model'] != models]
+
+    data = data.reset_index(drop=True)
+
+    models = data['Model']
+    pre_time = data['Preprocess Time (ms)']
+    inf_time = data['Inference Time (ms)']
+    post_time = data['Postprocess Time (ms)']
+    
+    x = range(len(models))
+    
+    plt.figure(figsize=(12, 7))
+
+    p1 = plt.bar(models, pre_time, label='Pre-process', color='#76b7b2', edgecolor='white', width=0.6)
+    p2 = plt.bar(models, inf_time, bottom=pre_time, label='Inference', color='#4e79a7', edgecolor='white', width=0.6)
+    p3 = plt.bar(models, post_time, bottom=pre_time + inf_time, label='Post-process', color='#e15759', edgecolor='white', width=0.6)
+    
+    for i in range(len(data)):
+        val_pre = pre_time[i]
+        val_inf = inf_time[i]
+        val_post = post_time[i]
+        total = val_pre + val_inf + val_post
+        
+        def place_text(value, bottom_start):
+            pct = (value / total) * 100
+            if pct > 2:
+                plt.text(i, bottom_start + (value / 2), f'{pct:.0f}%', 
+                         ha='center', va='center', color='white', 
+                         fontsize=8, fontweight='bold')
+
+        place_text(val_pre, 0)
+        place_text(val_inf, val_pre)
+        place_text(val_post, val_pre + val_inf)
+    
+    total_times = pre_time + inf_time + post_time
+    for i, total in enumerate(total_times):
+        plt.text(i, total, f'{total:.1f} ms', 
+                 ha='center', va='bottom', fontsize=9, fontweight='bold', color='black')
+
+    plt.title('Décomposition du Temps de Latence (Pre / Inf / Post)')
+    plt.ylabel('Temps (ms)')
+    plt.xlabel('Modèle')
+    plt.xticks(rotation=20, ha='right')
+    
+    plt.legend(loc='upper left', title="Étapes")
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
+    
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.close()
+
 def plot_swap_usage_stacked(df, filename, baseline_pct, total_swap_gb=16, filter_models=[]):
     data = df.copy()
     plt.figure(figsize=(10, 6))
@@ -155,14 +210,14 @@ def plot_swap_usage_stacked(df, filename, baseline_pct, total_swap_gb=16, filter
     plt.close()
 
 if __name__ == "__main__":
-    df_clean, baseline_val = load_data_and_baseline('benchmark_results_person.csv')
+    df_clean, baseline_val = load_data_and_baseline('benchmark/benchmark_results.csv')
 
     plot_bubble_chart(
         df_clean, 
         title='Précision vs Énergie', 
         filename='graph1_precision_joules.png',
         color='blue',
-        filter_models=['yolo11n.onnx'],
+        filter_models=['yolo11n-8.engine'],
         highlight_special=True
     )
     
@@ -176,4 +231,9 @@ if __name__ == "__main__":
         filename='graph4_precision_joules_all.png',
         color='orange',
         highlight_special=True
+    )
+
+    plot_time_breakdown(
+        df_clean, 
+        filename='graph5_time_breakdown.png',
     )
